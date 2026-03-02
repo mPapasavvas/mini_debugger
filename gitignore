@@ -1,0 +1,23 @@
+*.exe
+*.out
+*.o
+*.a
+*.dll
+*.so
+*.dylib
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.rar
+
+# Images (if you don't want to track them)
+*.png
+*.jpg
+*.gif
+
+# Other common binaries
+*.pdf
+*.bin
+*.dat
