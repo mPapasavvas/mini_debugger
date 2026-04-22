@@ -96,6 +96,7 @@ void load_symbols(const char *path) {
             symtable[symcount].addr = sym.st_value;
             symtable[symcount].name = strdup(name);
             symcount++;
+            fprintf(stderr, "  sym: %s @ 0x%lx\n", name, sym.st_value);
         }
     }
 
@@ -300,6 +301,7 @@ void bp_add_sym(int pid, char *symname)
     for(int i = 0; i<symcount; i++)
     {
         if(!strcmp(symname, symtable[i].name)){
+            fprintf(stderr, "DEBUG: looking up '%s', found addr 0x%lx\n", symname, symtable[i].addr);
             bp_add(pid, symtable[i].addr);
             return;
         }
@@ -335,6 +337,7 @@ int main(int argc, char **argv)
     }
 
     /* Code that is run by the parent.  */
+    waitpid(pid, 0, 0);  /* wait for child to stop after execvp */
     ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_EXITKILL);
 
     /* Pre-run REPL: set breakpoints before starting */
@@ -346,10 +349,13 @@ int main(int argc, char **argv)
         int  id;
         char symname[256];
 
-        if (sscanf(line, "b %lx", &addr) == 1) {
-            bp_add(pid, addr);
-        } else if(sscanf(line, "b %s", symname) == 1){
-            bp_add_sym(pid, symname);
+        if (sscanf(line, "b %s", symname) == 1) {
+            if (strncmp(symname, "0x", 2) == 0) {
+                addr = strtol(symname, NULL, 16);
+                bp_add(pid, addr);
+            } else {
+                bp_add_sym(pid, symname);
+            }   
         } else if (sscanf(line, "d %d", &id) == 1) {
             bp_remove(pid, id);
         } else if (strncmp(line, "l", 4) == 0) {
@@ -401,9 +407,18 @@ int main(int argc, char **argv)
                 while ((line = readline(TOOL">"))!=NULL) {
                     if (*line) add_history(line);
 
-                    int id;
-
-                    if (strncmp(line, "c", 1) == 0) {
+                    long addr;
+                    int  id;
+                    char symname[256];   
+        
+                    if (sscanf(line, "b %s", symname) == 1) {
+                        if (strncmp(symname, "0x", 2) == 0) {
+                            addr = strtol(symname, NULL, 16);
+                            bp_add(pid, addr);
+                        } else {
+                            bp_add_sym(pid, symname);
+                        }   
+                    }else if (strncmp(line, "c", 1) == 0) {
                         break;
                     } else if (strncmp(line, "s", 1) == 0) {
                         process_step(pid);
