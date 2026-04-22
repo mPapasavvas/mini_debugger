@@ -442,6 +442,18 @@ int main(int argc, char **argv)
                     free(line);
                 }
             }
+            fprintf(stderr, "DEBUG: single stepping and re-arming\n");
+            ptrace(PTRACE_SINGLESTEP, pid, 0, 0);
+            waitpid(pid, &status, 0);
+
+            /* Re-arm only if breakpoint still exists */
+            for (int i = 0; i < bpcount; i++) {
+                if (bptable[i].address == bp_addr) {
+                    long trap = (bptable[i].original_bytes & 0xFFFFFFFFFFFFFF00) | 0xCC;
+                    ptrace(PTRACE_POKEDATA, pid, (void *)bp_addr, (void *)trap);
+                    break;
+                }
+            }
 
             if (ptrace(PTRACE_CONT, pid, 0, 0) == -1)
                 die("(cont) %s", strerror(errno));
