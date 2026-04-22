@@ -106,20 +106,6 @@ void load_symbols(const char *path) {
     
 }
 
-void process_inspect(int pid) {
-    struct user_regs_struct regs;
-
-    if (ptrace(PTRACE_GETREGS, pid, 0, &regs) == -1) 
-            die("%s", strerror(errno));
-  
-    long current_ins = ptrace(PTRACE_PEEKDATA, pid, regs.rip, 0);
-    if (current_ins == -1) 
-        die("(peekdata) %s", strerror(errno));
-   
-    fprintf(stderr, "=> 0x%llx: 0x%lx\n", regs.rip, current_ins);
- 
-}
-
 int bp_add(int pid, long addr) {
     /* Backup current code.  */
     long original = 0; 
@@ -319,7 +305,7 @@ int main(int argc, char **argv)
 
 
 
-    /* fork() for executing the program that is analyzed.  */
+    
     pid_t pid = fork();
     switch (pid) {
         case -1: /* error */
@@ -327,20 +313,16 @@ int main(int argc, char **argv)
         case 0:  /* Code that is run by the child. */
             /* Start tracing.  */
             ptrace(PTRACE_TRACEME, 0, 0, 0);
-            /* execvp() is a system call, the child will block and
-               the parent must do waitpid().
-               The waitpid() of the parent is in the label
-               waitpid_for_execvp.
-             */
+            
             execvp(argv[1], argv + 1);
             die("%s", strerror(errno));
     }
 
-    /* Code that is run by the parent.  */
+    //parent
     waitpid(pid, 0, 0);  /* wait for child to stop after execvp */
     ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_EXITKILL);
 
-    /* Pre-run REPL: set breakpoints before starting */
+    //set breakpoints before starting
     char *line;
     while ((line = readline(TOOL"> ")) != NULL) {
         if (*line) add_history(line);
@@ -402,7 +384,7 @@ int main(int argc, char **argv)
                 /* Restore original bytes */
                 ptrace(PTRACE_POKEDATA, pid, (void *)bp_addr, (void *)bptable[idx].original_bytes);
 
-                /* Post-run REPL */
+                // after run
                 char *line;
                 while ((line = readline(TOOL">"))!=NULL) {
                     if (*line) add_history(line);
@@ -446,7 +428,7 @@ int main(int argc, char **argv)
             ptrace(PTRACE_SINGLESTEP, pid, 0, 0);
             waitpid(pid, &status, 0);
 
-            /* Re-arm only if breakpoint still exists */
+	    //rearm breakpoint
             for (int i = 0; i < bpcount; i++) {
                 if (bptable[i].address == bp_addr) {
                     long trap = (bptable[i].original_bytes & 0xFFFFFFFFFFFFFF00) | 0xCC;
