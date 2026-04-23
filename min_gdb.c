@@ -96,7 +96,7 @@ void load_symbols(const char *path) {
             symtable[symcount].addr = sym.st_value;
             symtable[symcount].name = strdup(name);
             symcount++;
-            fprintf(stderr, "  sym: %s @ 0x%lx\n", name, sym.st_value);
+            //fprintf(stderr, "  sym: %s @ 0x%lx\n", name, sym.st_value);
         }
     }
 
@@ -180,7 +180,7 @@ void serve_breakpoint(int pid, long original_instruction) {
     if (ptrace(PTRACE_GETREGS, pid, 0, &regs) == -1) 
             die("(getregs) %s", strerror(errno));
   
-    process_inspect(pid); 
+    show_current(pid); 
     getchar();
 
     fprintf(stderr, "Resuming.\n");
@@ -287,7 +287,7 @@ void bp_add_sym(int pid, char *symname)
     for(int i = 0; i<symcount; i++)
     {
         if(!strcmp(symname, symtable[i].name)){
-            fprintf(stderr, "DEBUG: looking up '%s', found addr 0x%lx\n", symname, symtable[i].addr);
+            //fprintf(stderr, "DEBUG: looking up '%s', found addr 0x%lx\n", symname, symtable[i].addr);
             bp_add(pid, symtable[i].addr);
             return;
         }
